@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tom & Gil's Japan Adventure</title>
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    body { margin: 0; padding: 0; background: #f8f6f3; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- Data ---
+    const DAYS = [
+      {
+        day: 0, date: "May 30", dow: "Sat", title: "Arrival Day",
+        location: "Tokyo (Shinjuku)", region: "tokyo1", icon: "✈️",
+        summary: "Land at Narita 12:30 PM → N'EX to Shinjuku → evening exploration",
+        highlights: ["Omoide Yokocho yakitori", "Kabukicho wander", "Fuunji ramen"],
+        sleep: "Hotel Gracery Shinjuku", transport: "N'EX from Narita (80 min, ¥3,250/pp)",
+        tips: "Low-key, jet-lag-friendly evening. Grab eSIMs at airport.", food: "Fuunji tsukemen (¥950), Omoide Yokocho yakitori (~¥2,000/pp)"
+      },
+      {
+        day: 1, date: "May 31", dow: "Sun", title: "Full Day in Tokyo",
+        location: "Tokyo (Shinjuku)", region: "tokyo1", icon: "🏙️",
+        summary: "Suga Shrine → Shinjuku Gyoen → Shibuya afternoon & evening",
+        highlights: ["Suga Shrine (Your Name)", "Shinjuku Gyoen gardens", "Shibuya Crossing", "Nonbei Yokocho"],
+        sleep: "Hotel Gracery Shinjuku", transport: "Walking + subway",
+        tips: "Arrive at Gyukatsu Motomura at opening to skip 30–60 min waits.", food: "Gyukatsu Motomura (¥1,300), Ichiran ramen (¥1,100)"
+      },
+      {
+        day: 2, date: "Jun 1", dow: "Mon", title: "Tokyo → Hakone",
+        location: "Hakone", region: "drive", icon: "♨️",
+        summary: "Romancecar to Odawara → pick up rental car → Hakone",
+        highlights: ["Open-Air Museum", "Owakudani volcanic valley", "Black eggs", "Ryokan + kaiseki + onsen"],
+        sleep: "Fukuzumiro Ryokan", transport: "Romancecar to Odawara (75 min) → drive 25 min",
+        tips: "Pick up car at Toyota Rent-a-Car, Odawara Station West Exit. Hydrangea Train may have early blooms!", food: "Kaiseki dinner at ryokan (included), black eggs at Owakudani (¥500)"
+      },
+      {
+        day: 3, date: "Jun 2", dow: "Tue", title: "Hakone → Kawaguchiko",
+        location: "Kawaguchiko", region: "drive", icon: "🗻",
+        summary: "Ryokan breakfast → drive to Kawaguchiko → Chureito Pagoda → lakeside",
+        highlights: ["Lake Ashi option", "Chureito Pagoda", "Lakeside walking", "Kubota Itchiku Art Museum (rain plan)"],
+        sleep: "Fuji View Hotel", transport: "Drive 1.5–2 hrs via Ashinoko Skyline (¥860 toll, cash only)",
+        tips: "~20% chance of seeing Fuji in June. Dawn is the clearest window — step outside early!", food: "Lakeside cafes, hotel dinner"
+      },
+      {
+        day: 4, date: "Jun 3", dow: "Wed", title: "Kawaguchiko → Kiso Valley",
+        location: "Narai-juku, Kiso Valley", region: "drive", icon: "🏘️",
+        summary: "Drive west → optional Matsumoto Castle → Narai-juku post town",
+        highlights: ["Matsumoto Castle (optional)", "Narai-juku merchant street", "Lacquerware shops", "Kiso soba"],
+        sleep: "Matsushiro-ya Ryokan", transport: "Drive 2.5–3 hrs via Chuo Expressway",
+        tips: "Evening is the magic hour — day-trippers leave and you have the town to yourselves.", food: "Local Kiso soba, ryokan dinner with carp sashimi & river fish"
+      },
+      {
+        day: 5, date: "Jun 4", dow: "Thu", title: "Kiso Valley → Takayama",
+        location: "Takayama", region: "drive", icon: "🥩",
+        summary: "Optional Tsumago–Magome hike → drive through Alps → Takayama",
+        highlights: ["Tsumago–Magome hike (8 km)", "Route 158 Alps drive", "Sanmachi Suji", "Hida beef sushi at JUGEMU"],
+        sleep: "Honjin Hiranoya Kachoan (splurge)", transport: "Drive 2–2.5 hrs via Route 158 (spectacular Alps road)",
+        tips: "If hiking: drive to Magome, hike to Tsumago, bus back. Luggage forwarding available.", food: "Hida beef kaiseki at ryokan, JUGEMU beef sushi (¥600–1,000)"
+      },
+      {
+        day: 6, date: "Jun 5", dow: "Fri", title: "Shirakawa-gō Day Trip",
+        location: "Takayama", region: "drive", icon: "🏔️",
+        summary: "Morning markets → Shirakawa-gō UNESCO village → evening in Takayama",
+        highlights: ["Jinya-mae & Miyagawa markets", "Wada & Kanda House", "Shiroyama Viewpoint", "Mitarashi dango"],
+        sleep: "Country Hotel Takayama", transport: "Drive 50 min each way to Shirakawa-gō",
+        tips: "Markets are best before 9 AM. Budget 3–4 hours for Shirakawa-gō.", food: "Suzuya Hida Beef Hoba Miso (¥2,000–3,500), Hidagyu Maruaki yakiniku"
+      },
+      {
+        day: 7, date: "Jun 6", dow: "Sat", title: "Kanazawa + Festival",
+        location: "Kanazawa", region: "drive", icon: "🎭",
+        summary: "Drive to Kanazawa → drop car → Hyakumangoku Festival!",
+        highlights: ["Drop rental car", "Omicho Market lunch", "Hyakumangoku Parade (2–6 PM)", "Kenroku-en irises", "Yukata dance", "Noh at castle"],
+        sleep: "Onyado Nono Kanazawa", transport: "Drive 2 hrs, return car at Kanazawa Station",
+        tips: "Leave by 9:30 AM to catch the parade at 2 PM. Join the evening dance!", food: "Omicho kaisendon (¥2,500–4,000), gold leaf ice cream (¥500–800)"
+      },
+      {
+        day: 8, date: "Jun 7", dow: "Sun", title: "Kanazawa → Osaka",
+        location: "Osaka", region: "kansai", icon: "🐙",
+        summary: "Morning festival events → train to Osaka → Dotonbori food crawl",
+        highlights: ["Tea ceremonies at Kenroku-en", "Dotonbori neon", "Takoyaki & kushikatsu"],
+        sleep: "Cross Hotel Osaka", transport: "Hokuriku Shinkansen + Thunderbird (2.5–3 hrs)",
+        tips: "Transition from driving to trains! Festival tea ceremonies in the morning.", food: "Aizuya takoyaki (¥500–700), Daruma kushikatsu, Dotonbori crawl"
+      },
+      {
+        day: 9, date: "Jun 8", dow: "Mon", title: "Universal Studios Japan",
+        location: "Osaka", region: "kansai", icon: "🎮",
+        summary: "Full day at USJ — Super Nintendo World + Donkey Kong Country",
+        highlights: ["Super Nintendo World", "Donkey Kong Country", "Mine Cart Madness", "USJ 25th Anniversary"],
+        sleep: "Cross Hotel Osaka", transport: "Train to USJ",
+        tips: "Arrive 90 min before opening. Express Pass 7 essential (Mine Cart: 149 min avg wait without).", food: "Theme park dining"
+      },
+      {
+        day: 10, date: "Jun 9", dow: "Tue", title: "Osaka → Kōyasan",
+        location: "Kōyasan", region: "kansai", icon: "🕯️",
+        summary: "Den Den Town morning → Nankai train to Kōyasan → night cemetery tour",
+        highlights: ["Den Den Town anime district", "Shōjin ryōri dinner", "Okunoin night cemetery tour"],
+        sleep: "Ekoin Temple", transport: "Nankai Railway to Kōyasan",
+        tips: "Forward suitcases to Kyoto hotel. The night tour is THE signature experience.", food: "Shōjin ryōri (Buddhist vegetarian cuisine) at temple"
+      },
+      {
+        day: 11, date: "Jun 10", dow: "Wed", title: "Kōyasan → Kyoto",
+        location: "Kyoto", region: "kansai", icon: "⛩️",
+        summary: "Morning fire ceremony → transfer to Kyoto → Gion evening",
+        highlights: ["Buddhist fire ceremony", "Gion district", "Kawadoko riverside dinner"],
+        sleep: "Karasuma Kyoto Hotel", transport: "Nankai + transfer through Osaka to Kyoto",
+        tips: "Kibune kawadoko opens Jun 1 — mountain platforms 10°C cooler than Kyoto!", food: "Kawadoko dinner (¥5,500–16,500/pp), Gion dining"
+      },
+      {
+        day: 12, date: "Jun 11", dow: "Thu", title: "Full Day in Kyoto",
+        location: "Kyoto", region: "kansai", icon: "🎋",
+        summary: "Fushimi Inari at dawn → Arashiyama → Nishiki Market → Kinkaku-ji",
+        highlights: ["Fushimi Inari (dawn)", "Arashiyama bamboo grove", "Tenryu-ji", "Nishiki Market", "Kinkaku-ji"],
+        sleep: "Karasuma Kyoto Hotel", transport: "Trains + walking",
+        tips: "Start Fushimi Inari as early as possible. Nishiki Market: try tako tamago!", food: "Nishiki Market grazing (tako tamago ¥600–800), matcha treats"
+      },
+      {
+        day: 13, date: "Jun 12", dow: "Fri", title: "Nara Day Trip",
+        location: "Kyoto", region: "kansai", icon: "🦌",
+        summary: "Train to Nara → Todai-ji → deer park → Kasuga Taisha → return",
+        highlights: ["Todai-ji (Great Buddha)", "Nara deer park", "Kasuga Taisha stone lanterns"],
+        sleep: "Karasuma Kyoto Hotel", transport: "Train to Nara (~45 min each way)",
+        tips: "June is hamo (conger eel) season in Kyoto — try it for dinner!", food: "Hamo dinner in Kyoto, Nara mochi"
+      },
+      {
+        day: 14, date: "Jun 13", dow: "Sat", title: "Ghibli Park Day",
+        location: "Tokyo (Asakusa)", region: "tokyo2", icon: "🏰",
+        summary: "Shinkansen to Nagoya → Ghibli Park (all 5 areas) → Shinkansen to Tokyo",
+        highlights: ["Grand Warehouse", "Hill of Youth", "Dondoko Forest", "Mononoke Village", "Valley of Witches"],
+        sleep: "MIMARU Tokyo Asakusa", transport: "Shinkansen Kyoto→Nagoya (35 min) + Nagoya→Tokyo (1h40)",
+        tips: "Tickets on sale Apr 10, 2 PM JST. Use multiple devices! Plan 8+ hours.", food: "Ghibli Park dining, Tokyo evening meal"
+      },
+      {
+        day: 15, date: "Jun 14", dow: "Sun", title: "Anime & Culture",
+        location: "Tokyo (Asakusa)", region: "tokyo2", icon: "🎌",
+        summary: "Akihabara → Nakano Broadway → Sanno Matsuri tail end",
+        highlights: ["Akihabara", "Nakano Broadway", "Sanno Matsuri (Jun 7–17)", "Bon Odori dancing"],
+        sleep: "MIMARU Tokyo Asakusa", transport: "Subway",
+        tips: "Sanno Matsuri Bon Odori runs Jun 13–15 — catch the dancing!", food: "Akihabara street food"
+      },
+      {
+        day: 16, date: "Jun 15", dow: "Mon", title: "TeamLab + Harajuku",
+        location: "Tokyo (Asakusa)", region: "tokyo2", icon: "🎨",
+        summary: "TeamLab → Meiji Shrine → Harajuku → Omotesando",
+        highlights: ["TeamLab", "Meiji Shrine", "Harajuku Takeshita St.", "Omotesando"],
+        sleep: "MIMARU Tokyo Asakusa", transport: "Subway",
+        tips: "Maisen tonkatsu in Omotesando (converted bathhouse) — legendary.", food: "Maisen tonkatsu (¥1,500), Harajuku crêpes, Isetan depachika"
+      },
+      {
+        day: 17, date: "Jun 16", dow: "Tue", title: "Kamakura Hydrangeas",
+        location: "Tokyo (Asakusa)", region: "tokyo2", icon: "💐",
+        summary: "Day trip to Kamakura — peak hydrangea season!",
+        highlights: ["Meigetsu-in (Hydrangea Temple)", "Hase-dera hillside path", "2,500+ hydrangeas", "Great Buddha"],
+        sleep: "MIMARU Tokyo Asakusa", transport: "JR Yokosuka Line (~1 hr each way)",
+        tips: "Hase-dera requires timed entry (¥500+¥400, book online). Meigetsu-in Blue is iconic.", food: "Kamakura seafood, evening meal in Tokyo"
+      },
+      {
+        day: 18, date: "Jun 17", dow: "Wed", title: "Ghibli Museum",
+        location: "Tokyo (Asakusa)", region: "tokyo2", icon: "🎬",
+        summary: "Ghibli Museum in Mitaka → free afternoon exploration",
+        highlights: ["Ghibli Museum", "Inokashira Park", "Kichijoji neighborhood"],
+        sleep: "MIMARU Tokyo Asakusa", transport: "JR Chuo Line to Mitaka (~20 min from Shinjuku)",
+        tips: "Tickets on sale May 10, 10 AM JST — sell out in minutes! Plan 2–3 hours.", food: "Kichijoji dining, apartment kitchen cooking"
+      },
+      {
+        day: 19, date: "Jun 18", dow: "Thu", title: "Tokyo: Free Day",
+        location: "Tokyo (Asakusa)", region: "tokyo2", icon: "🗼",
+        summary: "Open day — revisit favorites or explore new neighborhoods",
+        highlights: ["Tsukiji Outer Market", "Ginza", "Ueno museums", "Send luggage to Narita"],
+        sleep: "MIMARU Tokyo Asakusa", transport: "Subway",
+        tips: "Send suitcases to Narita via Yamato TODAY (2 days before flight).", food: "Tsukiji sushi omakase (¥6,600), Sushino Midori (¥3,000–5,000)"
+      },
+      {
+        day: 20, date: "Jun 19", dow: "Fri", title: "Tokyo: Final Full Day",
+        location: "Tokyo (Asakusa)", region: "tokyo2", icon: "🌃",
+        summary: "Last full day — savor Tokyo",
+        highlights: ["Senso-ji morning", "Sumida River walk", "Last-chance shopping", "Final ramen"],
+        sleep: "MIMARU Tokyo Asakusa", transport: "Walking + subway",
+        tips: "Isetan B1 — arrive 30–60 min before closing for 20–50% off premium bento.", food: "Hayashi ramen (24hrs, Shibuya), Konjiki Hototogisu (Michelin, ~¥1,000)"
+      },
+      {
+        day: 21, date: "Jun 20", dow: "Sat", title: "Departure ✈️",
+        location: "Narita Airport", region: "departure", icon: "👋",
+        summary: "Final morning → N'EX to Narita → Flight EY801 at 6:00 PM",
+        highlights: ["Last Senso-ji visit", "Sumida River stroll", "Pick up bags at GPA counter"],
+        sleep: "—", transport: "N'EX from Shinjuku ~12:30 PM (¥3,250/pp)",
+        tips: "Arrive Narita by 3:00–3:30 PM. GPA counter Terminal 1, 4F — waybill + passport.", food: "Airport food, plane food, memories"
+      }
+    ];
+
+    const REGIONS = {
+      tokyo1: { label: "Tokyo I", color: "#E8594F", bg: "#FFF5F4" },
+      drive: { label: "Driving", color: "#D4874D", bg: "#FFF8F1" },
+      kansai: { label: "Kansai", color: "#5B8C5A", bg: "#F3FAF3" },
+      tokyo2: { label: "Tokyo II", color: "#4A7FB5", bg: "#F0F6FC" },
+      departure: { label: "Depart", color: "#8B7DB8", bg: "#F8F5FC" }
+    };
+
+    const BUDGET = [
+      { cat: "Accommodation", yen: 500000, usd: 3330, icon: "🏨" },
+      { cat: "Food", yen: 272000, usd: 1815, icon: "🍜" },
+      { cat: "Car Rental", yen: 130000, usd: 865, icon: "🚗" },
+      { cat: "Train Tickets", yen: 81000, usd: 540, icon: "🚅" },
+      { cat: "Local Transit", yen: 50000, usd: 335, icon: "🚇" },
+      { cat: "Activities", yen: 94000, usd: 625, icon: "🎟️" },
+      { cat: "Luggage Fwd", yen: 22000, usd: 147, icon: "📦" },
+      { cat: "eSIM", yen: 5500, usd: 37, icon: "📱" },
+      { cat: "Misc", yen: 55000, usd: 365, icon: "🛍️" },
+    ];
+
+    const TICKETS = [
+      { what: "Ghibli Park (Jun 13)", sale: "Apr 10, 2 PM JST", via: "Lawson / Klook", priority: "high" },
+      { what: "Ghibli Museum", sale: "May 10, 10 AM JST", via: "Lawson Ticket", priority: "high" },
+      { what: "USJ Express Pass 7", sale: "~2 months before", via: "USJ website", priority: "high" },
+      { what: "Hase-dera timed entry", sale: "Available now", via: "Online", priority: "med" },
+      { what: "Kiso Valley inns", sale: "ASAP", via: "japaneseguesthouses.com", priority: "high" },
+      { what: "1949 IDP from MEMSI", sale: "1–2 months before", via: "MEMSI Israel", priority: "high" },
+    ];
+
+    /* ── Responsive hook ── */
+    function useIsMobile(bp = 700) {
+      const [m, setM] = useState(typeof window !== "undefined" ? window.innerWidth < bp : false);
+      useEffect(() => {
+        const h = () => setM(window.innerWidth < bp);
+        window.addEventListener("resize", h);
+        return () => window.removeEventListener("resize", h);
+      }, [bp]);
+      return m;
+    }
+
+    /* ── Small shared components ── */
+    function RegionPill({ region }) {
+      const r = REGIONS[region];
+      return (
+        <span style={{
+          display: "inline-block", padding: "2px 10px", borderRadius: 99,
+          fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
+          color: r.color, background: r.bg,
+          border: `1px solid ${r.color}22`, textTransform: "uppercase",
+        }}>{r.label}</span>
+      );
+    }
+
+    function InfoBlock({ icon, label, text, color }) {
+      return (
+        <div style={{
+          background: "#fafaf8", borderRadius: 10, padding: "11px 13px",
+          borderLeft: `3px solid ${color}55`,
+        }}>
+          <div style={{
+            fontSize: 11, fontWeight: 700, color: "#999", marginBottom: 3,
+            textTransform: "uppercase", letterSpacing: "0.04em",
+          }}>{icon} {label}</div>
+          <div style={{ fontSize: 13, color: "#444", lineHeight: 1.5 }}>{text}</div>
+        </div>
+      );
+    }
+
+    /* ── Mobile horizontal day picker ── */
+    function MobileDayPicker({ activeDay, onSelect }) {
+      const ref = useRef(null);
+      useEffect(() => {
+        if (ref.current?.children[activeDay]) {
+          ref.current.children[activeDay].scrollIntoView({
+            inline: "center", behavior: "smooth", block: "nearest",
+          });
+        }
+      }, [activeDay]);
+
+      return (
+        <div ref={ref} style={{
+          display: "flex", gap: 6, overflowX: "auto", padding: "6px 0 10px",
+          WebkitOverflowScrolling: "touch", scrollbarWidth: "none",
+        }}>
+          {DAYS.map((d, i) => {
+            const r = REGIONS[d.region];
+            const on = activeDay === i;
+            return (
+              <button key={i} onClick={() => onSelect(i)} style={{
+                flexShrink: 0, display: "flex", flexDirection: "column",
+                alignItems: "center", padding: "8px 8px 6px",
+                borderRadius: 10, minWidth: 50,
+                border: on ? `2px solid ${r.color}` : "2px solid transparent",
+                background: on ? r.bg : "#fff",
+                cursor: "pointer",
+                boxShadow: on ? `0 2px 8px ${r.color}20` : "0 1px 3px #0001",
+              }}>
+                <span style={{ fontSize: 17, lineHeight: 1 }}>{d.icon}</span>
+                <span style={{
+                  fontSize: 9, fontWeight: 700, marginTop: 3,
+                  color: on ? r.color : "#999", whiteSpace: "nowrap",
+                }}>{d.date}</span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
+    /* ── Desktop sidebar card ── */
+    function DayCard({ day, isActive, onClick }) {
+      const r = REGIONS[day.region];
+      return (
+        <button onClick={onClick} style={{
+          display: "flex", alignItems: "center", gap: 12, width: "100%",
+          padding: "12px 14px", textAlign: "left",
+          border: isActive ? `2px solid ${r.color}` : "2px solid transparent",
+          borderRadius: 12, cursor: "pointer",
+          background: isActive ? r.bg : "#fff",
+          boxShadow: isActive ? `0 2px 12px ${r.color}18` : "0 1px 3px #0001",
+          transition: "all 0.15s ease",
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10, flexShrink: 0,
+            background: isActive ? r.color : "#f5f3f0",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 19,
+          }}>{day.icon}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{
+              fontSize: 10, fontWeight: 700, color: "#999",
+              textTransform: "uppercase", letterSpacing: "0.06em",
+            }}>{day.dow} {day.date}</div>
+            <div style={{
+              fontSize: 13, fontWeight: 600, color: "#1a1a1a",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>{day.title}</div>
+            <div style={{
+              fontSize: 11, color: "#777",
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>{day.location}</div>
+          </div>
+        </button>
+      );
+    }
+
+    /* ── Detail panel (used in both layouts) ── */
+    function DetailPanel({ day, isMobile }) {
+      const r = REGIONS[day.region];
+      return (
+        <div style={{ animation: "fadeIn 0.22s ease" }}>
+          <div style={{ marginBottom: 18 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+              <span style={{ fontSize: isMobile ? 26 : 32 }}>{day.icon}</span>
+              <div>
+                <div style={{
+                  fontSize: 11, fontWeight: 700, color: "#999",
+                  textTransform: "uppercase", letterSpacing: "0.06em",
+                }}>Day {day.day + 1} — {day.dow} {day.date}</div>
+                <h2 style={{
+                  fontSize: isMobile ? 17 : 22, fontWeight: 700, color: "#1a1a1a",
+                  margin: 0, fontFamily: "'Noto Serif JP', Georgia, serif",
+                }}>{day.title}</h2>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <RegionPill region={day.region} />
+              <span style={{ fontSize: 12, color: "#888" }}>📍 {day.location}</span>
+            </div>
+          </div>
+
+          <p style={{
+            fontSize: 14, lineHeight: 1.65, color: "#333", margin: "0 0 16px 0",
+            fontFamily: "'Noto Serif JP', Georgia, serif",
+          }}>{day.summary}</p>
+
+          {/* Info grid — single column on mobile */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap: 10, marginBottom: 16,
+          }}>
+            <InfoBlock icon="🚃" label="Transport" text={day.transport} color={r.color} />
+            <InfoBlock icon="🛏️" label="Sleep" text={day.sleep} color={r.color} />
+            <InfoBlock icon="🍽️" label="Food" text={day.food} color={r.color} />
+            <InfoBlock icon="💡" label="Tip" text={day.tips} color={r.color} />
+          </div>
+
+          {/* Highlights */}
+          <div style={{
+            background: r.bg, borderRadius: 12,
+            padding: isMobile ? "12px" : "16px 18px",
+            border: `1px solid ${r.color}15`,
+          }}>
+            <div style={{
+              fontSize: 12, fontWeight: 700, color: r.color, marginBottom: 8,
+              textTransform: "uppercase", letterSpacing: "0.06em",
+            }}>Highlights</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {day.highlights.map((h, i) => (
+                <span key={i} style={{
+                  padding: "4px 10px", borderRadius: 8,
+                  background: "#fff", fontSize: 13, color: "#444",
+                  border: `1px solid ${r.color}20`,
+                }}>{h}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Budget tab ── */
+    function BudgetTab({ isMobile }) {
+      const total = BUDGET.reduce((s, b) => s + b.usd, 0);
+      const max = Math.max(...BUDGET.map(b => b.usd));
+      return (
+        <div>
+          <h2 style={{
+            fontSize: isMobile ? 18 : 20, fontWeight: 700, margin: "0 0 4px 0",
+            fontFamily: "'Noto Serif JP', Georgia, serif",
+          }}>Budget Breakdown</h2>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px 0" }}>
+            For two • 22 days • ~${total.toLocaleString()} total
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {BUDGET.map((b, i) => (
+              <div key={i}>
+                <div style={{
+                  display: "flex", justifyContent: "space-between",
+                  alignItems: "baseline", marginBottom: 4, gap: 6,
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
+                    {b.icon} {b.cat}
+                  </span>
+                  <span style={{
+                    fontSize: 13, color: "#666", fontVariantNumeric: "tabular-nums",
+                    whiteSpace: "nowrap",
+                  }}>
+                    {isMobile ? `$${b.usd.toLocaleString()}` : `¥${b.yen.toLocaleString()} / $${b.usd.toLocaleString()}`}
+                  </span>
+                </div>
+                <div style={{ height: 8, background: "#f0eeeb", borderRadius: 4, overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", width: `${(b.usd / max) * 100}%`,
+                    background: "linear-gradient(90deg, #D4874D, #E8594F)",
+                    borderRadius: 4,
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{
+            marginTop: 16, padding: "12px 14px", background: "#fafaf8",
+            borderRadius: 10, display: "flex", justifyContent: "space-between",
+            borderTop: "2px solid #e8e4df",
+          }}>
+            <span style={{ fontSize: 15, fontWeight: 700 }}>Total</span>
+            <span style={{ fontSize: 15, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>
+              ${total.toLocaleString()}
+            </span>
+          </div>
+          <p style={{ fontSize: 12, color: "#aaa", marginTop: 8, lineHeight: 1.5 }}>
+            ~${Math.round(total / 2).toLocaleString()}/person • ~${Math.round(total / 2 / 22)}/person/day
+          </p>
+        </div>
+      );
+    }
+
+    /* ── Tickets / Prep tab ── */
+    function TicketsTab({ isMobile }) {
+      return (
+        <div>
+          <h2 style={{
+            fontSize: isMobile ? 18 : 20, fontWeight: 700, margin: "0 0 4px 0",
+            fontFamily: "'Noto Serif JP', Georgia, serif",
+          }}>🎟️ Tickets & Bookings</h2>
+          <p style={{ fontSize: 13, color: "#888", margin: "0 0 16px 0" }}>
+            Time-sensitive — don't miss these windows!
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {TICKETS.map((t, i) => (
+              <div key={i} style={{
+                padding: "12px 14px", borderRadius: 10,
+                background: t.priority === "high" ? "#FFF5F4" : "#fafaf8",
+                border: t.priority === "high" ? "1px solid #E8594F22" : "1px solid #e8e4df",
+              }}>
+                <div style={{
+                  display: "flex", justifyContent: "space-between",
+                  alignItems: "center", marginBottom: 4, gap: 6, flexWrap: "wrap",
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>{t.what}</span>
+                  {t.priority === "high" && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, color: "#E8594F",
+                      background: "#E8594F15", padding: "2px 8px",
+                      borderRadius: 99, textTransform: "uppercase", flexShrink: 0,
+                    }}>Priority</span>
+                  )}
+                </div>
+                <div style={{ fontSize: 12, color: "#666" }}>
+                  📅 <strong>{t.sale}</strong> — {t.via}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{
+            fontSize: 16, fontWeight: 700, margin: "22px 0 10px",
+            fontFamily: "'Noto Serif JP', Georgia, serif",
+          }}>📱 Apps to Download</h3>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+            gap: 8,
+          }}>
+            {[
+              ["Google Maps", "Transit + driving nav"],
+              ["NAVITIME", "Best transit app"],
+              ["Google Translate", "Camera translation"],
+              ["SmartEX", "Shinkansen booking"],
+              ["GO Taxi", "Ride-hailing"],
+              ["Safety Tips", "Earthquake alerts"],
+            ].map(([name, desc], i) => (
+              <div key={i} style={{
+                padding: "10px 12px", borderRadius: 8,
+                background: "#fafaf8", border: "1px solid #e8e4df",
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>{name}</div>
+                <div style={{ fontSize: 11, color: "#888" }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{
+            fontSize: 16, fontWeight: 700, margin: "22px 0 10px",
+            fontFamily: "'Noto Serif JP', Georgia, serif",
+          }}>🎒 Rainy Season Essentials</h3>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {[
+              { item: "Compact umbrella", cat: "rain" },
+              { item: "Waterproof jacket", cat: "rain" },
+              { item: "Waterproof shoes", cat: "rain" },
+              { item: "Quick-dry clothing", cat: "rain" },
+              { item: "Small towel", cat: "rain" },
+              { item: "1949 IDP + license", cat: "docs" },
+              { item: "Passports", cat: "docs" },
+              { item: "eSIMs (2×)", cat: "tech" },
+              { item: "Portable charger", cat: "tech" },
+              { item: "¥10k–20k cash", cat: "money" },
+            ].map((p, i) => (
+              <span key={i} style={{
+                padding: "5px 10px", borderRadius: 8, fontSize: 13, color: "#444",
+                background: p.cat === "rain" ? "#E3F2FD" : p.cat === "docs" ? "#FFF3E0"
+                  : p.cat === "tech" ? "#F3E5F5" : "#E8F5E9",
+                border: "1px solid #0001",
+              }}>{p.item}</span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ── Timeline bar (mini) ── */
+    function TimelineBar({ activeDay, onSelect }) {
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 2, width: "100%" }}>
+          {DAYS.map((d, i) => {
+            const r = REGIONS[d.region]; const on = activeDay === i;
+            return (
+              <button key={i} onClick={() => onSelect(i)}
+                title={`${d.date} — ${d.title}`}
+                style={{
+                  flex: 1, minWidth: 4, height: on ? 18 : 10, borderRadius: 3,
+                  background: on ? r.color : `${r.color}44`,
+                  border: "none", cursor: "pointer", transition: "all 0.15s ease",
+                  padding: 0,
+                }}
+              />
+            );
+          })}
+        </div>
+      );
+    }
+
+    /* ──────────────── MAIN APP ──────────────── */
+    function JapanTripCanvas() {
+      const [activeDay, setActiveDay] = useState(0);
+      const [tab, setTab] = useState("itinerary");
+      const isMobile = useIsMobile();
+      const listRef = useRef(null);
+
+      // Scroll sidebar to active card (desktop only)
+      useEffect(() => {
+        if (!isMobile && listRef.current?.children[activeDay]) {
+          listRef.current.children[activeDay].scrollIntoView({
+            block: "nearest", behavior: "smooth",
+          });
+        }
+      }, [activeDay, isMobile]);
+
+      // Swipe left/right to change day on mobile
+      const touch = useRef({ x: 0, y: 0 });
+      const onTS = (e) => {
+        touch.current.x = e.touches[0].clientX;
+        touch.current.y = e.touches[0].clientY;
+      };
+      const onTE = (e) => {
+        if (tab !== "itinerary") return;
+        const dx = e.changedTouches[0].clientX - touch.current.x;
+        const dy = e.changedTouches[0].clientY - touch.current.y;
+        // Only trigger if horizontal swipe dominates
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          if (dx > 0 && activeDay > 0) setActiveDay(activeDay - 1);
+          else if (dx < 0 && activeDay < DAYS.length - 1) setActiveDay(activeDay + 1);
+        }
+      };
+
+      const px = isMobile ? 14 : 32;
+
+      return (
+        <div onTouchStart={onTS} onTouchEnd={onTE} style={{
+          fontFamily: "'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+          background: "#f8f6f3", minHeight: "100vh", color: "#1a1a1a",
+        }}>
+          <style>{`
+            @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Noto+Serif+JP:wght@400;700&display=swap');
+            @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(5px); }
+              to { opacity: 1; transform: translateY(0); }
+            }
+            * { box-sizing: border-box; margin: 0; }
+            ::-webkit-scrollbar { width: 4px; height: 4px; }
+            ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+          `}</style>
+
+          {/* ── HEADER ── */}
+          <div style={{
+            background: "linear-gradient(135deg, #1a1a1a 0%, #2d2620 100%)",
+            padding: isMobile ? "18px 14px 14px" : "26px 32px 18px",
+            color: "#fff",
+          }}>
+            <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+              <div style={{
+                fontSize: 10, fontWeight: 600, color: "#D4874D",
+                textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4,
+              }}>🇯🇵 May 30 — Jun 20, 2026 • 22 Days</div>
+              <h1 style={{
+                fontSize: isMobile ? 19 : 28, fontWeight: 700, marginBottom: 2,
+                fontFamily: "'Noto Serif JP', Georgia, serif",
+                background: "linear-gradient(90deg, #fff, #e8d5c0)",
+                WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>Tom & Gil's Japan Adventure</h1>
+              {!isMobile && (
+                <p style={{ fontSize: 13, color: "#a09585", marginBottom: 0 }}>
+                  Tokyo → Hakone → Fuji → Alps → Kanazawa → Osaka → Kōyasan → Kyoto → Tokyo
+                </p>
+              )}
+              <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
+                {[
+                  { id: "itinerary", label: isMobile ? "📅 Days" : "📅 Itinerary" },
+                  { id: "budget", label: "💰 Budget" },
+                  { id: "tickets", label: "🎟️ Prep" },
+                ].map(t => (
+                  <button key={t.id} onClick={() => setTab(t.id)} style={{
+                    padding: isMobile ? "6px 11px" : "7px 16px",
+                    borderRadius: 8, border: "none",
+                    fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    background: tab === t.id ? "#D4874D" : "#ffffff15",
+                    color: tab === t.id ? "#fff" : "#a09585",
+                  }}>{t.label}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ── TIMELINE BAR (itinerary tab) ── */}
+          {tab === "itinerary" && (
+            <div style={{
+              background: "#fff", borderBottom: "1px solid #e8e4df",
+              padding: isMobile ? "8px 14px" : "10px 32px",
+            }}>
+              <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+                {!isMobile && (
+                  <div style={{ display: "flex", gap: 14, marginBottom: 6 }}>
+                    {Object.entries(REGIONS).map(([k, v]) => (
+                      <span key={k} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#888" }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 2, background: v.color, display: "inline-block" }} />
+                        {v.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <TimelineBar activeDay={activeDay} onSelect={setActiveDay} />
+              </div>
+            </div>
+          )}
+
+          {/* ── CONTENT ── */}
+          <div style={{ maxWidth: 1200, margin: "0 auto", padding: `14px ${px}px 40px` }}>
+            {tab === "itinerary" ? (
+              isMobile ? (
+                /* ──── MOBILE: horiz picker + detail ──── */
+                <div>
+                  <MobileDayPicker activeDay={activeDay} onSelect={setActiveDay} />
+
+                  {/* Prev / Next buttons */}
+                  <div style={{
+                    display: "flex", justifyContent: "space-between",
+                    alignItems: "center", marginBottom: 10,
+                  }}>
+                    <button onClick={() => setActiveDay(Math.max(0, activeDay - 1))}
+                      disabled={activeDay === 0}
+                      style={{
+                        padding: "7px 14px", borderRadius: 8,
+                        border: "1px solid #e0dcd7", background: "#fff",
+                        fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        opacity: activeDay === 0 ? 0.3 : 1, color: "#555",
+                      }}>← Prev</button>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "#999" }}>
+                      {activeDay + 1} / {DAYS.length}
+                    </span>
+                    <button onClick={() => setActiveDay(Math.min(DAYS.length - 1, activeDay + 1))}
+                      disabled={activeDay === DAYS.length - 1}
+                      style={{
+                        padding: "7px 14px", borderRadius: 8,
+                        border: "1px solid #e0dcd7", background: "#fff",
+                        fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        opacity: activeDay === DAYS.length - 1 ? 0.3 : 1, color: "#555",
+                      }}>Next →</button>
+                  </div>
+
+                  <div style={{
+                    background: "#fff", borderRadius: 14,
+                    padding: "18px 14px", boxShadow: "0 1px 6px #0001",
+                  }}>
+                    <DetailPanel day={DAYS[activeDay]} isMobile key={activeDay} />
+                  </div>
+                </div>
+              ) : (
+                /* ──── DESKTOP: sidebar + detail ──── */
+                <div style={{ display: "flex", gap: 24 }}>
+                  <div ref={listRef} style={{
+                    width: 290, flexShrink: 0,
+                    display: "flex", flexDirection: "column", gap: 6,
+                    maxHeight: "calc(100vh - 220px)", overflowY: "auto", paddingRight: 6,
+                  }}>
+                    {DAYS.map((d, i) => (
+                      <DayCard key={i} day={d} isActive={activeDay === i}
+                        onClick={() => setActiveDay(i)} />
+                    ))}
+                  </div>
+                  <div style={{
+                    flex: 1, background: "#fff", borderRadius: 16,
+                    padding: "28px 30px", boxShadow: "0 1px 8px #0001",
+                    maxHeight: "calc(100vh - 220px)", overflowY: "auto",
+                  }}>
+                    <DetailPanel day={DAYS[activeDay]} isMobile={false} key={activeDay} />
+                  </div>
+                </div>
+              )
+            ) : tab === "budget" ? (
+              <div style={{
+                maxWidth: 640, background: "#fff", borderRadius: 14,
+                padding: isMobile ? "18px 14px" : "28px 30px",
+                boxShadow: "0 1px 6px #0001",
+              }}>
+                <BudgetTab isMobile={isMobile} />
+              </div>
+            ) : (
+              <div style={{
+                maxWidth: 640, background: "#fff", borderRadius: 14,
+                padding: isMobile ? "18px 14px" : "28px 30px",
+                boxShadow: "0 1px 6px #0001",
+              }}>
+                <TicketsTab isMobile={isMobile} />
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Render the React app into the DOM
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<JapanTripCanvas />);
+  </script>
+</body>
+</html>
